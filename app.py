@@ -123,7 +123,7 @@ def predict_skin_condition(image, age, gender):
 def peer_group_analysis(age, gender, user_skin_analysis):
     min_age = age - 3
     max_age = age + 3
-    all_data = pd.read_excel('https://github.com/kovas-strategy/my_skin_project.git/main/all_data.xlsx')  # GitHub에서 불러오기
+    all_data = pd.read_excel('https://github.com/kovas-strategy/my_skin_project/blob/master/all_data.xlsx')  # GitHub에서 불러오기
     peer_group = all_data[(all_data['성별'] == gender) & (all_data['나이'] >= min_age) & (all_data['나이'] <= max_age)]
     peer_group_skin = peer_group.iloc[:, 1:]
     peer_group_mean = peer_group_skin.mean(axis=0)
