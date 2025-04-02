@@ -4,3 +4,4 @@ torchvision
 pandas
 openpyxl
 Pillow
+gunicorn
