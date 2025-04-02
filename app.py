@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
-from flask import Flask, render_template, request, jsonify
+import torchvision.models as models  # Make sure this import is present
+from flask import Flask, render_template, request
 from PIL import Image
 import torchvision.transforms as transforms
 from io import BytesIO
