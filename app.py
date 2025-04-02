@@ -191,8 +191,6 @@ def index():
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'png', 'jpg', 'jpeg'}
 
-# 이 부분에서 Flask 애플리케이션을 실행하도록 수정
+# Flask 애플리케이션을 실행하는 부분 제거 (Gunicorn에서 실행)
 if __name__ == '__main__':
-    # 포트 설정을 환경 변수에서 받아와서 실행
-    port = int(os.environ.get("PORT", 10000))  # Render에서 제공하는 포트
-    app.run(host="0.0.0.0", port=port)
+    pass  # 이제 gunicorn이 이 앱을 실행합니다
