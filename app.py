@@ -3,6 +3,7 @@ import torch
 import pandas as pd
 from PIL import Image
 import torchvision.transforms as transforms
+from torchvision import models
 import torch.nn as nn
 import os
 import numpy as np
@@ -14,8 +15,13 @@ app = Flask(__name__)
 # 모델 로딩
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+model = models.resnet50(pretrained=False)  # 원하는 모델 구조 선택
+model.fc = nn.Linear(model.fc.in_features, 81)
+
 # 모델 로드
 model = torch.load("best_skin_model.pth", map_location=device)
+
+model = model.to(device)
 model.eval()  # 평가 모드
 
 # 이미지 전처리
