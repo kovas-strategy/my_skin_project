@@ -15,7 +15,7 @@ app = Flask(__name__)
 # 모델 로딩
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-model = models.resnet50(pretrained=False)  # 원하는 모델 구조 선택
+model = models.resnet50(weights=None)  # pretrained=False 대신 weights=None 사용
 model.fc = nn.Linear(model.fc.in_features, 81)
 
 # 모델 로드
