@@ -1,43 +1,34 @@
-from flask import Flask, render_template, request
 import torch
-import pandas as pd
+import torch.nn as nn
+from flask import Flask, render_template, request, jsonify
 from PIL import Image
 import torchvision.transforms as transforms
-from torchvision import models
-import torch.nn as nn
-import os
-import numpy as np
 from io import BytesIO
+import numpy as np
 
-# Flask 앱 설정
+# Flask app setup
 app = Flask(__name__)
 
-# 모델 로딩
+# Load model once when the app starts
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-model = models.resnet50(weights=None)  # pretrained=False 대신 weights=None 사용
-model.fc = nn.Linear(model.fc.in_features, 81)
-
-# Load model state_dict
+model = models.mobilenet_v2(pretrained=False) # pretrained=False instead of weights=None
+model.classifier[1] = nn.Linear(model.classifier[1].in_features, 81)  # Adjust output layer
 model.load_state_dict(torch.load("best_skin_model.pth", map_location=device))
+model.to(device)
+model.eval()  # Set to evaluation mode
 
-model = model.to(device)
-model.eval()  # 평가 모드
-
-# 이미지 전처리
+# Image preprocessing
 transform = transforms.Compose([
-    transforms.Resize((200, 300)),
+    transforms.Resize((224, 224)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
-# 피부 상태 예측 함수
+# Prediction function
 def predict_skin_condition(image, age, gender):
-    image = transform(image).unsqueeze(0).to(device)  # 배치 차원 추가
-    
+    image = transform(image).unsqueeze(0).to(device)  # Add batch dimension
     with torch.no_grad():
-        outputs = model(image)  # 모델 예측
-    
+        outputs = model(image)  # Model prediction
     predicted_skin = outputs.squeeze(0).cpu().numpy()
     
     # 피부 상태 분석 (모든 항목 포함)
@@ -167,7 +158,7 @@ def peer_group_analysis(age, gender, user_skin_analysis):
 
     return feedback
 
-# 웹페이지 라우팅
+# Route to handle file upload and prediction
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
@@ -181,16 +172,17 @@ def index():
             age = int(request.form['age'])
             gender = int(request.form['gender'])
 
+            # Skin condition prediction
             skin_analysis = predict_skin_condition(image, age, gender)
-            feedback = peer_group_analysis(age, gender, skin_analysis)
 
-            return render_template('result.html', skin_analysis=skin_analysis, feedback=feedback)
+            # Send the result to the frontend (HTML page)
+            return render_template('result.html', skin_analysis=skin_analysis)
 
     return render_template('index.html')
 
+# Function to check allowed file extensions
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'png', 'jpg', 'jpeg'}
 
-# Flask 애플리케이션을 실행하는 부분 제거 (Gunicorn에서 실행)
 if __name__ == '__main__':
-    pass  # 이제 gunicorn이 이 앱을 실행합니다
+    app.run(host="0.0.0.0", port=5000)  # Runs on port 5000
