@@ -6,6 +6,7 @@ from PIL import Image
 import torchvision.transforms as transforms
 from io import BytesIO
 import numpy as np
+import pandas as pd  # Add this line at the top of your app.py
 
 # Flask app setup
 app = Flask(__name__)
