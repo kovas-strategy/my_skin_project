@@ -13,8 +13,8 @@ app = Flask(__name__)
 
 # Load model once when the app starts
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = models.mobilenet_v2(pretrained=False) # pretrained=False instead of weights=None
-model.classifier[1] = nn.Linear(model.classifier[1].in_features, 81)  # Adjust output layer
+model = models.resnet18(pretrained=False)  # Using ResNet18 (smaller model)
+model.fc = nn.Linear(model.fc.in_features, 81)  # Adjust output layer for 81 classes
 model.load_state_dict(torch.load("best_skin_model.pth", map_location=device))
 model.to(device)
 model.eval()  # Set to evaluation mode
