@@ -1,30 +1,36 @@
+import os
 import torch
 import torch.nn as nn
-import torchvision.models as models  # Make sure this import is present
+import torchvision.models as models
 from flask import Flask, render_template, request
 from PIL import Image
 import torchvision.transforms as transforms
 from io import BytesIO
 import numpy as np
-import pandas as pd  # Add this line at the top of your app.py
+import pandas as pd
 
-# Flask app setup
 app = Flask(__name__)
 
-# Load model once when the app starts
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = models.resnet18(pretrained=False)  # Using ResNet18 (smaller model)
-model.fc = nn.Linear(model.fc.in_features, 81)  # Adjust output layer for 81 classes
-model.load_state_dict(torch.load("best_skin_model.pth", map_location=device))
-model.to(device)
-model.eval()  # Set to evaluation mode
+model = models.resnet50(pretrained=False)
+model.fc = nn.Linear(model.fc.in_features, 81)
 
-# Image preprocessing
+# 환경변수에서 모델 경로를 받아오거나 기본값 사용
+model_path = os.getenv('MODEL_PATH', 'best_skin_model.pth')
+model.load_state_dict(torch.load(model_path, map_location=device))
+model.to(device)
+model.eval()
+
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
+
+def allowed_file(filename):
+    """Check if the file has an allowed extension."""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'png', 'jpg', 'jpeg'}
+
 
 # Prediction function
 def predict_skin_condition(image, age, gender):
@@ -118,29 +124,42 @@ def predict_skin_condition(image, age, gender):
 
     return skin_analysis
 
-# Peer 그룹 분석 함수
+# 각 항목을 비교할 때 전체 항목의 평균을 구해 피드백을 하나만 제공
 def peer_group_analysis(age, gender, user_skin_analysis):
+    # 나이 범위 설정 (예: 나이 ±3)
     min_age = age - 3
     max_age = age + 3
-    all_data = pd.read_excel('https://raw.githubusercontent.com/kovas-strategy/my_skin_project/master/all_data.xlsx') # GitHub에서 불러오기
+    
+    # 예시 URL은 GitHub 저장소의 Raw 주소를 사용해야 함
+    url = "https://raw.githubusercontent.com/kovas-strategy/my_skin_project/master/all_data.xlsx"
+    all_data = pd.read_excel(url)
+    
+    # 나이 범위와 성별에 맞는 그룹 필터링
     peer_group = all_data[(all_data['성별'] == gender) & (all_data['나이'] >= min_age) & (all_data['나이'] <= max_age)]
-    peer_group_skin = peer_group.iloc[:, 1:]
+    
+    # 피어 그룹의 피부 상태 항목 추출 (모든 피부 상태 항목을 포함하도록 수정)
+    peer_group_skin = peer_group.iloc[:, 1:]  # 데이터의 모든 컬럼을 가져오도록 수정 (1열부터 끝까지)
+    
+    # 각 항목별로 peer 그룹 평균을 계산
     peer_group_mean = peer_group_skin.mean(axis=0)
+    
+    # 사용자 피부 상태와 피어 그룹 평균 비교하여 피드백 제공
     feedback = {}
 
+    # 각 항목을 비교할 때 전체 항목의 평균을 구해 피드백을 하나만 제공
     def compare_with_peer_group(features, category, is_better_low=True):
         user_values = [user_skin_analysis[feature] for feature in features]
         peer_mean = peer_group_mean[features].mean()
         user_avg = np.mean(user_values)
-
-        if is_better_low:
+        
+        if is_better_low:  # 값이 낮을수록 좋은 경우
             if user_avg < peer_mean:
                 feedback[category] = f"Your {category} is better than average."
             elif user_avg > peer_mean:
                 feedback[category] = f"Your {category} is above average. You may want to focus on improving this area."
             else:
                 feedback[category] = f"Your {category} is right around average."
-        else:
+        else:  # 값이 높을수록 좋은 경우
             if user_avg > peer_mean:
                 feedback[category] = f"Your {category} is better than average."
             elif user_avg < peer_mean:
@@ -148,43 +167,95 @@ def peer_group_analysis(age, gender, user_skin_analysis):
             else:
                 feedback[category] = f"Your {category} is right around average."
 
-    # 수분, 탄력, 주름 등 여러 항목을 분석
-    moisture_features = ['수분_이마', '수분_오른쪽볼', '수분_왼쪽볼', '수분_턱']
+    # 수분 관련 항목 (평균값이 낮으면 좋음)
+    moisture_features = [
+        '수분_이마', '수분_오른쪽볼', '수분_왼쪽볼', '수분_턱'
+    ]
     compare_with_peer_group(moisture_features, "수분", is_better_low=True)
 
-    elasticity_features = ['탄력_턱_R0', '탄력_턱_R1', '탄력_턱_R2', '탄력_턱_R3']
-    compare_with_peer_group(elasticity_features, "탄력_턱", is_better_low=False)
+    # 탄력 관련 항목 (평균값이 높으면 좋음)
+    elasticity_chin_features = [
+        '탄력_턱_R0', '탄력_턱_R1', '탄력_턱_R2', '탄력_턱_R3',
+        '탄력_턱_R4', '탄력_턱_R5', '탄력_턱_R6', '탄력_턱_R7',
+        '탄력_턱_R8', '탄력_턱_R9', '탄력_턱_Q0', '탄력_턱_Q1',
+        '탄력_턱_Q2', '탄력_턱_Q3'
+    ]
+    compare_with_peer_group(elasticity_chin_features, "탄력_턱", is_better_low=False)
 
-    wrinkle_features = ['주름_왼쪽눈가_Ra', '주름_왼쪽눈가_Rq', '주름_오른쪽눈가_Ra', '주름_오른쪽눈가_Rq']
-    compare_with_peer_group(wrinkle_features, "주름", is_better_low=True)
+    # 왼쪽 볼 탄력 관련 항목 (평균값이 높으면 좋음)
+    elasticity_cheek_left_features = [
+        '탄력_왼쪽볼_R0', '탄력_왼쪽볼_R1', '탄력_왼쪽볼_R2', 
+        '탄력_왼쪽볼_R3', '탄력_왼쪽볼_R4', '탄력_왼쪽볼_R5',
+        '탄력_왼쪽볼_R6', '탄력_왼쪽볼_R7', '탄력_왼쪽볼_R8',
+        '탄력_왼쪽볼_R9', '탄력_왼쪽볼_Q0', '탄력_왼쪽볼_Q1',
+        '탄력_왼쪽볼_Q2', '탄력_왼쪽볼_Q3'
+    ]
+    compare_with_peer_group(elasticity_cheek_left_features, "탄력_왼쪽볼", is_better_low=False)
+
+    # 오른쪽 볼 탄력 관련 항목 (평균값이 높으면 좋음)
+    elasticity_cheek_right_features = [
+        '탄력_오른쪽볼_R0', '탄력_오른쪽볼_R1', '탄력_오른쪽볼_R2',
+        '탄력_오른쪽볼_R3', '탄력_오른쪽볼_R4', '탄력_오른쪽볼_R5',
+        '탄력_오른쪽볼_R6', '탄력_오른쪽볼_R7', '탄력_오른쪽볼_R8',
+        '탄력_오른쪽볼_R9', '탄력_오른쪽볼_Q0', '탄력_오른쪽볼_Q1',
+        '탄력_오른쪽볼_Q2', '탄력_오른쪽볼_Q3'
+    ]
+    compare_with_peer_group(elasticity_cheek_right_features, "탄력_오른쪽볼", is_better_low=False)
+
+    # 이마 탄력 관련 항목 (평균값이 높으면 좋음)
+    elasticity_forehead_features = [
+        '탄력_이마_R0', '탄력_이마_R1', '탄력_이마_R2', 
+        '탄력_이마_R3', '탄력_이마_R4', '탄력_이마_R5',
+        '탄력_이마_R6', '탄력_이마_R7', '탄력_이마_R8',
+        '탄력_이마_R9', '탄력_이마_Q0', '탄력_이마_Q1',
+        '탄력_이마_Q2', '탄력_이마_Q3'
+    ]
+    compare_with_peer_group(elasticity_forehead_features, "탄력_이마", is_better_low=False)
+
+    # 주름 관련 항목 (평균값이 낮으면 좋음)
+    wrinkle_eye_left_features = [
+        '주름_왼쪽눈가_Ra', '주름_왼쪽눈가_Rq', '주름_왼쪽눈가_Rmax', '주름_왼쪽눈가_R3z',
+        '주름_왼쪽눈가_Rt', '주름_왼쪽눈가_Rz=Rtm', '주름_왼쪽눈가_Rp', '주름_왼쪽눈가_Rv'
+    ]
+    compare_with_peer_group(wrinkle_eye_left_features, "주름_왼쪽눈가", is_better_low=True)
+
+    # 주름 관련 항목 (평균값이 낮으면 좋음)
+    wrinkle_eye_right_features = [
+        '주름_오른쪽눈가_Ra', '주름_오른쪽눈가_Rq', '주름_오른쪽눈가_Rmax', '주름_오른쪽눈가_R3z',
+        '주름_오른쪽눈가_Rt', '주름_오른쪽눈가_Rz=Rtm', '주름_오른쪽눈가_Rp', '주름_오른쪽눈가_Rv'
+    ]
+    compare_with_peer_group(wrinkle_eye_right_features, "주름_오른쪽눈가", is_better_low=True)
+
+    # 스팟개수, 모공개수 (평균값이 낮으면 좋음)
+    other_features = [
+        '스팟개수_정면', '모공개수_오른쪽볼', '모공개수_왼쪽볼'
+    ]
+    compare_with_peer_group(other_features, "스팟개수/모공개수", is_better_low=True)
 
     return feedback
 
-# Route to handle file upload and prediction
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        if 'file' not in request.files:
-            return 'No file part'
-        
-        file = request.files['file']
-        
-        if file and allowed_file(file.filename):
-            image = Image.open(BytesIO(file.read())).convert('RGB')
-            age = int(request.form['age'])
-            gender = int(request.form['gender'])
+        file = request.files.get('file')
+        age = request.form.get('age')
+        gender = request.form.get('gender')
 
-            # Skin condition prediction
-            skin_analysis = predict_skin_condition(image, age, gender)
-
-            # Send the result to the frontend (HTML page)
-            return render_template('result.html', skin_analysis=skin_analysis)
-
+        if file and allowed_file(file.filename) and age is not None and gender is not None:
+            try:
+                image = Image.open(BytesIO(file.read())).convert('RGB')
+                age = int(age)
+                gender = int(gender)
+                skin_analysis = predict_skin_condition(image, age, gender)
+                feedback = peer_group_analysis(age, gender, skin_analysis)  # 생성한 분석 결과를 feedback 변수에 저장
+                return render_template('result.html', feedback=feedback)  # feedback 변수를 템플릿으로 전달
+            except Exception as e:
+                return render_template('index.html', error=f"Error processing the image or data: {str(e)}")
+        else:
+            return render_template('index.html', error="Please ensure all fields are correctly filled and the file is an image.")
     return render_template('index.html')
 
-# Function to check allowed file extensions
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'png', 'jpg', 'jpeg'}
-
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000)  # Runs on port 5000
+    app.run(host='0.0.0.0', port=5000, debug=True)
+   

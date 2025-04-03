@@ -6,8 +6,12 @@
 </head>
 <body>
     <h1>피부 상태 분석 결과</h1>
-    {% for feature, msg in feedback.items() %}
-        <p>{{ feature }}: {{ msg }}</p>
-    {% endfor %}
+    {% if feedback %}
+        {% for key, value in feedback.items() %}
+            <p>{{ key }}: {{ value }}</p>
+        {% endfor %}
+    {% else %}
+        <p>분석 결과를 불러오는데 문제가 발생했습니다.</p>
+    {% endif %}
 </body>
 </html>
