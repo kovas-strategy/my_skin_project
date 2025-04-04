@@ -10,29 +10,34 @@
             align-items: center;
             height: 100vh;
             font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
         }
         .results-container {
             position: relative;
-            width: 300px; /* Adjust the size according to your face image */
-            height: 400px;
-            background-image: url('https://raw.githubusercontent.com/kovas-strategy/my_skin_project/master/face.png'); /* Replace with your image path */
+            width: 600px; /* Adjust the size based on your image dimensions */
+            height: 800px;
+            background-image: url('https://raw.githubusercontent.com/kovas-strategy/my_skin_project/master/face.png');
             background-size: cover;
+            background-repeat: no-repeat;
         }
         .feedback {
             position: absolute;
-            background: rgba(255, 255, 255, 0.8);
-            padding: 5px;
-            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 10px;
+            width: 180px;
+            text-align: center;
+            font-size: 14px;
         }
-        .chin { bottom: 10px; left: 50%; transform: translateX(-50%); }
-        .left-cheek { top: 150px; left: -100px; }
-        .right-cheek { top: 150px; right: -100px; }
-        .forehead { top: 10px; left: 50%; transform: translateX(-50%); }
-        .left-eye { top: 70px; left: 50px; }
-        .right-eye { top: 70px; right: 50px; }
+        .chin { bottom: 30px; left: 55%; transform: translateX(-50%); }
+        .left-cheek { top: 500px; left: 10px; }
+        .right-cheek { top: 500px; right: 10px; }
+        .forehead { top: 270px; left: 55%; transform: translateX(-50%); }
+        .left-eye { top: 350px; left: 1px; }
+        .right-eye { top: 350px; right: 1px; }
         .summary {
             position: absolute;
-            bottom: -50px;
+            bottom: -100px;
             left: 50%;
             transform: translateX(-50%);
             width: 100%;
@@ -43,35 +48,20 @@
 <body>
     <div class="results-container">
         {% if feedback %}
-            {% if '탄력_턱' in feedback %}
-                <div class="feedback chin">{{ feedback['탄력_턱'] }}</div>
-            {% endif %}
-            {% if '탄력_왼쪽볼' in feedback %}
-                <div class="feedback left-cheek">{{ feedback['탄력_왼쪽볼'] }}</div>
-            {% endif %}
-            {% if '탄력_오른쪽볼' in feedback %}
-                <div class="feedback right-cheek">{{ feedback['탄력_오른쪽볼'] }}</div>
-            {% endif %}
-            {% if '탄력_이마' in feedback %}
-                <div class="feedback forehead">{{ feedback['탄력_이마'] }}</div>
-            {% endif %}
-            {% if '주름_왼쪽눈가' in feedback %}
-                <div class="feedback left-eye">{{ feedback['주름_왼쪽눈가'] }}</div>
-            {% endif %}
-            {% if '주름_오른쪽눈가' in feedback %}
-                <div class="feedback right-eye">{{ feedback['주름_오른쪽눈가'] }}</div>
-            {% endif %}
+            <div class="feedback chin">{{ feedback.get('탄력_턱', 'No data for chin') }}</div>
+            <div class="feedback left-cheek">{{ feedback.get('탄력_왼쪽볼', 'No data for left cheek') }}</div>
+            <div class="feedback right-cheek">{{ feedback.get('탄력_오른쪽볼', 'No data for right cheek') }}</div>
+            <div class="feedback forehead">{{ feedback.get('탄력_이마', 'No data for forehead') }}</div>
+            <div class="feedback left-eye">{{ feedback.get('주름_왼쪽눈가', 'No data for left eye') }}</div>
+            <div class="feedback right-eye">{{ feedback.get('주름_오른쪽눈가', 'No data for right eye') }}</div>
             <div class="summary">
-                {% if '스팟개수/모공개수' in feedback %}
-                    <p>{{ feedback['스팟개수/모공개수'] }}</p>
-                {% endif %}
-                {% if '수분' in feedback %}
-                    <p>{{ feedback['수분'] }}</p>
-                {% endif %}
+                <p>{{ feedback.get('스팟개수/모공개수', 'No data for spots/pores') }}</p>
+                <p>{{ feedback.get('수분', 'No data for moisture') }}</p>
             </div>
         {% else %}
-            <p class="summary">분석 결과를 불러오는데 문제가 발생했습니다.</p>
+            <div class="summary">분석 결과를 불러오는데 문제가 발생했습니다.</div>
         {% endif %}
     </div>
 </body>
 </html>
+
