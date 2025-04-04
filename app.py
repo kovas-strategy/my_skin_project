@@ -156,7 +156,7 @@ def peer_group_analysis(age, gender, user_skin_analysis):
             if user_avg < peer_mean:
                 feedback[category] = f"Your {category} is better than average."
             elif user_avg > peer_mean:
-                feedback[category] = f"Your {category} is above average. You may want to focus on improving this area."
+                feedback[category] = f"Your {category} is below average. You may want to focus on improving this area."
             else:
                 feedback[category] = f"Your {category} is right around average."
         else:  # 값이 높을수록 좋은 경우
