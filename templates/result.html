@@ -3,15 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <title>분석 결과</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+        .results-container {
+            position: relative;
+            width: 300px; /* Adjust the size according to your face image */
+            height: 400px;
+            background-image: url('path_to_your_face_image.png'); /* Replace with your image path */
+            background-size: cover;
+        }
+        .feedback {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 5px;
+            border-radius: 5px;
+        }
+        .chin { bottom: 10px; left: 50%; transform: translateX(-50%); }
+        .left-cheek { top: 150px; left: -100px; }
+        .right-cheek { top: 150px; right: -100px; }
+        .forehead { top: 10px; left: 50%; transform: translateX(-50%); }
+        .left-eye { top: 70px; left: 50px; }
+        .right-eye { top: 70px; right: 50px; }
+        .summary {
+            position: absolute;
+            bottom: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
-    <h1>피부 상태 분석 결과</h1>
-    {% if feedback %}
-        {% for key, value in feedback.items() %}
-            <p>{{ key }}: {{ value }}</p>
-        {% endfor %}
-    {% else %}
-        <p>분석 결과를 불러오는데 문제가 발생했습니다.</p>
-    {% endif %}
+    <div class="results-container">
+        {% if feedback %}
+            {% if '탄력_턱' in feedback %}
+                <div class="feedback chin">{{ feedback['탄력_턱'] }}</div>
+            {% endif %}
+            {% if '탄력_왼쪽볼' in feedback %}
+                <div class="feedback left-cheek">{{ feedback['탄력_왼쪽볼'] }}</div>
+            {% endif %}
+            {% if '탄력_오른쪽볼' in feedback %}
+                <div class="feedback right-cheek">{{ feedback['탄력_오른쪽볼'] }}</div>
+            {% endif %}
+            {% if '탄력_이마' in feedback %}
+                <div class="feedback forehead">{{ feedback['탄력_이마'] }}</div>
+            {% endif %}
+            {% if '주름_왼쪽눈가' in feedback %}
+                <div class="feedback left-eye">{{ feedback['주름_왼쪽눈가'] }}</div>
+            {% endif %}
+            {% if '주름_오른쪽눈가' in feedback %}
+                <div class="feedback right-eye">{{ feedback['주름_오른쪽눈가'] }}</div>
+            {% endif %}
+            <div class="summary">
+                {% if '스팟개수/모공개수' in feedback %}
+                    <p>{{ feedback['스팟개수/모공개수'] }}</p>
+                {% endif %}
+                {% if '수분' in feedback %}
+                    <p>{{ feedback['수분'] }}</p>
+                {% endif %}
+            </div>
+        {% else %}
+            <p class="summary">분석 결과를 불러오는데 문제가 발생했습니다.</p>
+        {% endif %}
+    </div>
 </body>
 </html>
